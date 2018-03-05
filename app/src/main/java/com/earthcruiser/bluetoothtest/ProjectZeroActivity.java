@@ -232,7 +232,7 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> updateButtons(mButton,mPressed));
-            } else if( characteristic.getUuid().equals(DATA_SERVICE_UUID)) {
+            } else if( characteristic.getUuid().equals(STRING_UUID)) {
                 byte[] messageBytes = characteristic.getValue();
                 try {
                     vData = new String(messageBytes, "UTF-8");
@@ -303,10 +303,11 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> updateButtons(mButton,mPressed));
-            } else if( characteristic.getUuid().equals(DATA_SERVICE_UUID)) {
+            } else if( characteristic.getUuid().equals(STRING_UUID)) {
                 byte[] messageBytes = characteristic.getValue();
                 try {
                     vData = new String(messageBytes, "UTF-8");
+                    Log.e(TAG,"vData read as: " + vData);
                 } catch (UnsupportedEncodingException e) {
                     vData = "DATA ERROR";
                     Log.e(TAG,"Data service string decoding error");

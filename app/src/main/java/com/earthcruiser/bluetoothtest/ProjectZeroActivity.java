@@ -14,6 +14,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +43,7 @@ public class ProjectZeroActivity extends AppCompatActivity {
     BluetoothGattCharacteristic stringChar;
 
     ArrayList<BluetoothGattCharacteristic> characteristics;
+    ArrayList<Float> voltageList;
 
 
     boolean gattConnected = false;
@@ -50,6 +56,8 @@ public class ProjectZeroActivity extends AppCompatActivity {
     TextView mButtonZeroStateText;
     TextView mButtonOneStateText;
     TextView vDataText;
+
+    BarChart chart;
 
     Integer updateCounter = 0;
 
@@ -69,8 +77,10 @@ public class ProjectZeroActivity extends AppCompatActivity {
         mServicesText = findViewById(R.id.mServicesText);
         mButtonZeroStateText = findViewById(R.id.buttonZeroStateText);
         mButtonOneStateText = findViewById(R.id.buttonOneStateText);
+        chart = (BarChart) findViewById(R.id.chart);
         vDataText = findViewById(R.id.rawVoltText);
         characteristics = new ArrayList<>();
+        voltageList = new ArrayList<Float>();
         mDevice = getIntent().getParcelableExtra("bluetoothDevice");
         serviceList = new ArrayList<>();
         connectGatt();
@@ -122,6 +132,17 @@ public class ProjectZeroActivity extends AppCompatActivity {
     private void updateVData() {
         updateCounter++;
         vDataText.setText(vData.toString() + "  " + updateCounter.toString());
+        List<BarEntry> entries = new ArrayList<>();
+        entries.add(new BarEntry(0f,voltageList.get(0)));
+        entries.add(new BarEntry(1f,voltageList.get(1)));
+        entries.add(new BarEntry(2f,voltageList.get(2)));
+        //entries.add(new BarEntry(3f,voltageList.get(3)));
+        BarDataSet set = new BarDataSet(entries, "VoltageDataSet");
+        BarData chartData = new BarData(set);
+        chart.setData(chartData);
+        chart.invalidate();
+
+
     }
 
 
@@ -234,15 +255,32 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 runOnUiThread(() -> updateButtons(mButton,mPressed));
             } else if( characteristic.getUuid().equals(STRING_UUID)) {
                 byte[] messageBytes = characteristic.getValue();
+                vData = null;
                 try {
                     vData = new String(messageBytes, "UTF-8");
-                    Log.e(TAG,"vData read as: " + vData);
+                    Log.d(TAG,"vData read as: " + vData);
                 } catch (UnsupportedEncodingException e) {
-                    vData = "DATA ERROR";
+                    vData = "0,0,0,0,0";
                     Log.e(TAG,"Data service string decoding error");
                 }
+                decodeVoltage(vData);
                 runOnUiThread(() -> updateVData());
 
+            }
+        }
+
+        private void decodeVoltage(String voltageData) {
+            Log.d(TAG,"decodeVoltage()");
+            voltageData.replaceAll("\\s+","");
+            String data[] = voltageData.split(",");
+            voltageList.clear();
+            try {
+                for (String vString: data) {
+                    Log.e(TAG,"Decoding voltage: " + vString + " " + voltageList.size());
+                    voltageList.add(Float.parseFloat(vString));
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error decoding voltage values from string");
             }
         }
 
@@ -305,13 +343,15 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 runOnUiThread(() -> updateButtons(mButton,mPressed));
             } else if( characteristic.getUuid().equals(STRING_UUID)) {
                 byte[] messageBytes = characteristic.getValue();
+                vData = null;
                 try {
                     vData = new String(messageBytes, "UTF-8");
-                    Log.e(TAG,"vData read as: " + vData);
+                    Log.d(TAG,"vData read as: " + vData);
                 } catch (UnsupportedEncodingException e) {
-                    vData = "DATA ERROR";
+                    vData = "0,0,0,0,0";
                     Log.e(TAG,"Data service string decoding error");
                 }
+                decodeVoltage(vData);
                 runOnUiThread(() -> updateVData());
 
             }

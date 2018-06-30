@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
                 Object object = deviceListView.getItemAtPosition(i);
                 BluetoothDevice device = (BluetoothDevice) object;
                 Intent detailActivityIntent;
-                if(device.getName() != null && device.getName().equals("Project Zero R2")) {
+                if(device.getName() != null && device.getName().equals("WattLogix BAL02")) {
                     detailActivityIntent = new Intent(context, ProjectZeroActivity.class);
                 } else {
                     detailActivityIntent = new Intent(context, DeviceDetail.class);

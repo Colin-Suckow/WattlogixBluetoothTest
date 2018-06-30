@@ -3,4 +3,7 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="connected">#00e40f</color>
+    <color name='disconnected'>#ff0000</color>
+    <color name="connecting">#ff9d00</color>
 </resources>

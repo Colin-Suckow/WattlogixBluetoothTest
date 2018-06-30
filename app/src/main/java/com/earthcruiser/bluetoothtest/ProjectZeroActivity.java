@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
+import android.graphics.Color;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
@@ -56,6 +58,7 @@ public class ProjectZeroActivity extends AppCompatActivity {
     TextView mButtonZeroStateText;
     TextView mButtonOneStateText;
     TextView vDataText;
+    boolean mStopHandler = false;
 
     BarChart chart;
 
@@ -77,13 +80,41 @@ public class ProjectZeroActivity extends AppCompatActivity {
         mServicesText = findViewById(R.id.mServicesText);
         mButtonZeroStateText = findViewById(R.id.buttonZeroStateText);
         mButtonOneStateText = findViewById(R.id.buttonOneStateText);
+        mButtonOneStateText.setKeepScreenOn(true);
+
         chart = (BarChart) findViewById(R.id.chart);
+        chart.getAxisLeft().setAxisMinimum(0);
+        chart.getAxisLeft().setAxisMaximum(5.0f);
+        chart.getAxisRight().setDrawLabels(false);
+        chart.getXAxis().setDrawLabels(false);
+
         vDataText = findViewById(R.id.rawVoltText);
         characteristics = new ArrayList<>();
         voltageList = new ArrayList<Float>();
         mDevice = getIntent().getParcelableExtra("bluetoothDevice");
         serviceList = new ArrayList<>();
         connectGatt();
+
+        Handler mHandler = new Handler();
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+
+                if(gattConnected) {
+                    mGattCallback.readData(mGatt);
+                }
+
+                if (!mStopHandler) {
+                    mHandler.postDelayed(this, 1000);
+                }
+            }
+        };
+
+// start it with:
+        mHandler.post(runnable);
+
+
     }
 
     @Override
@@ -108,10 +139,27 @@ public class ProjectZeroActivity extends AppCompatActivity {
 
 
     public void connected() {
+        mServicesText.setTextColor(getResources().getColor(R.color.connected,getTheme()));
         mServicesText.setVisibility(View.VISIBLE);
         gattConnected = true;
 
     }
+
+    public void disconnected() {
+        mServicesText.setTextColor(getResources().getColor(R.color.disconnected,getTheme()));
+        mServicesText.setVisibility(View.VISIBLE);
+        gattConnected = false;
+
+    }
+
+    public void connecting() {
+        mServicesText.setTextColor(getResources().getColor(R.color.connecting,getTheme()));
+        mServicesText.setVisibility(View.VISIBLE);
+        gattConnected = false;
+
+    }
+
+
 
 
 
@@ -130,15 +178,16 @@ public class ProjectZeroActivity extends AppCompatActivity {
     }
 
     private void updateVData() {
-        updateCounter++;
         vDataText.setText(vData.toString() + "  " + updateCounter.toString());
         List<BarEntry> entries = new ArrayList<>();
         entries.add(new BarEntry(0f,voltageList.get(0)));
         entries.add(new BarEntry(1f,voltageList.get(1)));
         entries.add(new BarEntry(2f,voltageList.get(2)));
-        //entries.add(new BarEntry(3f,voltageList.get(3)));
+        entries.add(new BarEntry(3f,voltageList.get(3)));
         BarDataSet set = new BarDataSet(entries, "VoltageDataSet");
+        set.setValueTextSize(15.0f);
         BarData chartData = new BarData(set);
+        updateCounter++;
         chart.setData(chartData);
         chart.invalidate();
 
@@ -188,6 +237,8 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 mConnected = false;
                 gatt.disconnect();
                 gatt.close();
+                disconnected();
+                connectGatt();
             }
         }
 
@@ -209,12 +260,6 @@ public class ProjectZeroActivity extends AppCompatActivity {
             characteristics.add(button0Char);
             characteristics.add(button1Char);
             characteristics.add(stringChar);
-
-            readInitData(gatt);
-
-
-
-
 
             gatt.setCharacteristicNotification(button0Char, true);
             gatt.setCharacteristicNotification(button1Char, true);
@@ -271,7 +316,10 @@ public class ProjectZeroActivity extends AppCompatActivity {
 
         private void decodeVoltage(String voltageData) {
             Log.d(TAG,"decodeVoltage()");
-            voltageData.replaceAll("\\s+","");
+            voltageData = voltageData.replace("CV", "");
+            voltageData = voltageData.replace(" ", "");
+            voltageData = voltageData.replaceAll("\\s+","");
+            Log.e(TAG,"Voltage Data String: " + voltageData);
             String data[] = voltageData.split(",");
             voltageList.clear();
             try {
@@ -304,21 +352,11 @@ public class ProjectZeroActivity extends AppCompatActivity {
             subscribeToCharacteristics(gatt);
         }
 
-        private void readInitData(BluetoothGatt gatt) {
-            if(characteristics.size() == 0) {
-
-                characteristics.clear();
-                characteristics.add(button0Char);
-                characteristics.add(button1Char);
-                characteristics.add(stringChar);
-                subscribeToCharacteristics(gatt);
-
-
-                return;
+        public void readData(BluetoothGatt gatt) {
+            if(mConnected) {
+                gatt.readCharacteristic(stringChar);
             }
-            Log.d(TAG,"readInitData Reached: " + characteristics.size());
-            BluetoothGattCharacteristic characteristic = characteristics.get(0);
-            gatt.readCharacteristic(characteristic);
+
         }
 
         @Override
@@ -355,9 +393,6 @@ public class ProjectZeroActivity extends AppCompatActivity {
                 runOnUiThread(() -> updateVData());
 
             }
-            Log.d(TAG,"Reached end of onCharacteristicRead()");
-            characteristics.remove(0);
-            readInitData(gatt);
         }
 
 
